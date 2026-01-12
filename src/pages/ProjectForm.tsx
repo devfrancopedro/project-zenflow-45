@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, Calendar } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Calendar, Image, Ruler, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useData } from '@/contexts/DataContext';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -20,7 +20,7 @@ import {
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import { Company, Environment, ProjectStatus, Extra } from '@/types';
+import { Company, Environment, ProjectStatus, Extra, Measurement, ProjectImage } from '@/types';
 import { cn } from '@/lib/utils';
 
 const companies: Company[] = ['Caza 43', 'SOHO', 'ELIAS'];
@@ -33,6 +33,7 @@ export default function ProjectForm() {
   const { toast } = useToast();
   const { clients, sellers, addProject, updateProject, getProjectById } = useData();
   const isEditing = Boolean(id);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -47,6 +48,8 @@ export default function ProjectForm() {
     deliveryAddress: '',
     appliances: '',
     extras: [] as Extra[],
+    measurements: [] as Measurement[],
+    images: [] as ProjectImage[],
   });
 
   useEffect(() => {
@@ -66,6 +69,8 @@ export default function ProjectForm() {
           deliveryAddress: project.deliveryAddress || '',
           appliances: project.appliances || '',
           extras: project.extras,
+          measurements: project.measurements || [],
+          images: project.images || [],
         });
       }
     }
@@ -103,6 +108,60 @@ export default function ProjectForm() {
     }));
   };
 
+  // Measurement handlers
+  const handleAddMeasurement = () => {
+    setFormData((prev) => ({
+      ...prev,
+      measurements: [...prev.measurements, { id: Math.random().toString(36).substr(2, 9), name: '', value: '' }],
+    }));
+  };
+
+  const handleUpdateMeasurement = (index: number, field: 'name' | 'value', value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      measurements: prev.measurements.map((m, i) =>
+        i === index ? { ...m, [field]: value } : m
+      ),
+    }));
+  };
+
+  const handleRemoveMeasurement = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      measurements: prev.measurements.filter((_, i) => i !== index),
+    }));
+  };
+
+  // Image handlers
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const newImage: ProjectImage = {
+          id: Math.random().toString(36).substr(2, 9),
+          url: reader.result as string,
+          name: file.name,
+          createdAt: new Date(),
+        };
+        setFormData((prev) => ({
+          ...prev,
+          images: [...prev.images, newImage],
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveImage = (imageId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((img) => img.id !== imageId),
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -128,6 +187,8 @@ export default function ProjectForm() {
       deliveryAddress: formData.deliveryAddress,
       appliances: formData.appliances,
       extras: formData.extras.filter((e) => e.name.trim() !== ''),
+      measurements: formData.measurements.filter((m) => m.name.trim() !== '' && m.value.trim() !== ''),
+      images: formData.images,
     };
 
     if (isEditing && id) {
@@ -353,6 +414,114 @@ export default function ProjectForm() {
               placeholder="Liste os eletrodomésticos do projeto..."
               rows={4}
             />
+          </CardContent>
+        </Card>
+
+        {/* Measurements */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Ruler className="h-5 w-5 text-primary" />
+              Medidas
+            </CardTitle>
+            <Button type="button" variant="outline" size="sm" onClick={handleAddMeasurement}>
+              <Plus className="mr-2 h-4 w-4" />
+              Adicionar
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {formData.measurements.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma medida adicionada. Ex: Parede: 1110mm</p>
+            ) : (
+              <div className="space-y-4">
+                {formData.measurements.map((measurement, index) => (
+                  <div key={measurement.id} className="flex items-center gap-4">
+                    <Input
+                      value={measurement.name}
+                      onChange={(e) => handleUpdateMeasurement(index, 'name', e.target.value)}
+                      placeholder="Nome (ex: Parede lateral)"
+                      className="flex-1"
+                    />
+                    <Input
+                      value={measurement.value}
+                      onChange={(e) => handleUpdateMeasurement(index, 'value', e.target.value)}
+                      placeholder="Valor (ex: 1110mm)"
+                      className="w-40"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveMeasurement(index)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Images */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Image className="h-5 w-5 text-primary" />
+              Fotos do Projeto
+            </CardTitle>
+            <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+              <Plus className="mr-2 h-4 w-4" />
+              Adicionar Fotos
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+          </CardHeader>
+          <CardContent>
+            {formData.images.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed rounded-lg">
+                <Image className="h-12 w-12 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Nenhuma foto adicionada.</p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Clique para adicionar
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {formData.images.map((image) => (
+                  <div key={image.id} className="relative group rounded-lg overflow-hidden border">
+                    <img
+                      src={image.url}
+                      alt={image.name}
+                      className="w-full h-32 object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => handleRemoveImage(image.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs truncate p-2 bg-muted">{image.name}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 

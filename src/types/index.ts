@@ -13,6 +13,19 @@ export interface Extra {
   quantity: number;
 }
 
+export interface Measurement {
+  id: string;
+  name: string;
+  value: string;
+}
+
+export interface ProjectImage {
+  id: string;
+  url: string;
+  name: string;
+  createdAt: Date;
+}
+
 export type Company = "Caza 43" | "SOHO" | "ELIAS";
 export type ProjectStatus = "Em andamento" | "Finalizado" | "Aguardando" | "Cancelado";
 export type Environment = "Cozinha" | "Quarto" | "Banheiro" | "Área social" | "Escritório" | "Churrasqueira";
@@ -38,6 +51,8 @@ export interface Project {
   deliveryAddress?: string;
   appliances?: string;
   extras: Extra[];
+  measurements: Measurement[];
+  images: ProjectImage[];
   createdAt: Date;
   updatedAt: Date;
 }
