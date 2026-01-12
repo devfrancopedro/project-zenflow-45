@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -13,6 +14,9 @@ import {
   MessageSquare,
   Phone,
   Mail,
+  Ruler,
+  Image,
+  X,
 } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -21,11 +25,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog';
 
 export default function ProjectDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getProjectById, getClientById, getSellerById } = useData();
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const project = id ? getProjectById(id) : undefined;
   const client = project ? getClientById(project.clientId) : undefined;
@@ -161,6 +170,61 @@ export default function ProjectDetails() {
             </Card>
           )}
 
+          {/* Measurements */}
+          {project.measurements && project.measurements.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Ruler className="h-5 w-5 text-primary" />
+                  Medidas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {project.measurements.map((measurement) => (
+                    <div
+                      key={measurement.id}
+                      className="flex items-center justify-between rounded-lg border p-3 bg-muted/30"
+                    >
+                      <span className="text-muted-foreground">{measurement.name}</span>
+                      <span className="font-mono font-semibold text-primary">{measurement.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Images */}
+          {project.images && project.images.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Image className="h-5 w-5 text-primary" />
+                  Fotos do Projeto
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {project.images.map((image) => (
+                    <div
+                      key={image.id}
+                      className="relative rounded-lg overflow-hidden border cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                      onClick={() => setSelectedImage(image.url)}
+                    >
+                      <img
+                        src={image.url}
+                        alt={image.name}
+                        className="w-full h-32 object-cover"
+                      />
+                      <p className="text-xs truncate p-2 bg-muted">{image.name}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Observations */}
           {project.observations && (
             <Card>
@@ -271,6 +335,27 @@ export default function ProjectDetails() {
           </Card>
         </div>
       </div>
+
+      {/* Image Lightbox */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl p-0 bg-black/90">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-2 top-2 z-10 text-white hover:bg-white/20"
+            onClick={() => setSelectedImage(null)}
+          >
+            <X className="h-6 w-6" />
+          </Button>
+          {selectedImage && (
+            <img
+              src={selectedImage}
+              alt="Foto do projeto"
+              className="w-full h-auto max-h-[80vh] object-contain"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
