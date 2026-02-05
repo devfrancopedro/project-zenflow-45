@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Users, 
@@ -6,11 +6,13 @@ import {
   UserCog,
   ChevronLeft,
   ChevronRight,
-  Building2
+  Building2,
+  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -22,6 +24,13 @@ const navItems = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut, role } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
 
   return (
     <aside
@@ -69,8 +78,30 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Collapse Button */}
-      <div className="border-t border-sidebar-border p-3">
+      {/* User info and logout */}
+      <div className="border-t border-sidebar-border p-3 space-y-2">
+        {user && !collapsed && (
+          <div className="px-3 py-2 text-xs text-sidebar-foreground/60 truncate">
+            {user.email}
+            {role && (
+              <span className="ml-1 text-primary capitalize">({role})</span>
+            )}
+          </div>
+        )}
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleSignOut}
+          className={cn(
+            "w-full text-sidebar-foreground/80 hover:bg-destructive/10 hover:text-destructive",
+            collapsed && "px-2"
+          )}
+        >
+          <LogOut className="h-4 w-4" />
+          {!collapsed && <span className="ml-2">Sair</span>}
+        </Button>
+
         <Button
           variant="ghost"
           size="sm"
