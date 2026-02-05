@@ -19,6 +19,25 @@ export interface Measurement {
   value: string;
 }
 
+export type ProjectFileType =
+  | 'pdf'
+  | 'image'
+  | 'document'
+  | 'spreadsheet'
+  | 'archive'
+  | 'other';
+
+export interface ProjectFile {
+  id: string;
+  name: string;
+  url: string;
+  size: number;
+  mimeType: string;
+  type: ProjectFileType;
+  uploadedAt: Date;
+  uploadedBy: string;
+}
+
 export interface ProjectImage {
   id: string;
   url: string;
@@ -53,6 +72,7 @@ export interface Project {
   extras: Extra[];
   measurements: Measurement[];
   images: ProjectImage[];
+  files: ProjectFile[];
   createdAt: Date;
   updatedAt: Date;
 }

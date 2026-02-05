@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, Calendar, Image, Ruler, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Calendar, Image, Ruler, X, File as FileIcon, UploadCloud } from 'lucide-react';
 import { format } from 'date-fns';
 import { useData } from '@/contexts/DataContext';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -20,7 +20,7 @@ import {
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import { Company, Environment, ProjectStatus, Extra, Measurement, ProjectImage } from '@/types';
+import { Company, Environment, ProjectStatus, Extra, Measurement, ProjectImage, ProjectFile, ProjectFileType } from '@/types';
 import { cn } from '@/lib/utils';
 
 const companies: Company[] = ['Caza 43', 'SOHO', 'ELIAS'];
@@ -34,6 +34,7 @@ export default function ProjectForm() {
   const { clients, sellers, addProject, updateProject, getProjectById } = useData();
   const isEditing = Boolean(id);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const filesInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -50,6 +51,7 @@ export default function ProjectForm() {
     extras: [] as Extra[],
     measurements: [] as Measurement[],
     images: [] as ProjectImage[],
+    files: [] as ProjectFile[],
   });
 
   useEffect(() => {
@@ -71,10 +73,23 @@ export default function ProjectForm() {
           extras: project.extras,
           measurements: project.measurements || [],
           images: project.images || [],
+          files: project.files || [],
         });
       }
     }
   }, [id, getProjectById]);
+
+  const getFileType = (file: File): ProjectFileType => {
+    const ext = file.name.split('.').pop()?.toLowerCase();
+
+    if (ext === 'pdf') return 'pdf';
+    if (['jpg', 'jpeg', 'png', 'webp'].includes(ext || '')) return 'image';
+    if (['doc', 'docx'].includes(ext || '')) return 'document';
+    if (['xls', 'xlsx'].includes(ext || '')) return 'spreadsheet';
+    if (['zip', 'rar'].includes(ext || '')) return 'archive';
+
+    return 'other';
+  };
 
   const handleEnvironmentToggle = (env: Environment) => {
     setFormData((prev) => ({
@@ -162,6 +177,47 @@ export default function ProjectForm() {
     }));
   };
 
+  // Files handlers
+  const handleFilesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const filesList = e.target.files;
+    if (!filesList) return;
+
+    const now = new Date();
+    const newFiles: ProjectFile[] = [];
+
+    Array.from(filesList).forEach((file) => {
+      const id = Math.random().toString(36).substr(2, 9);
+      const url = URL.createObjectURL(file);
+
+      newFiles.push({
+        id,
+        name: file.name,
+        url,
+        size: file.size,
+        mimeType: file.type,
+        type: getFileType(file),
+        uploadedAt: now,
+        uploadedBy: 'Usuário atual',
+      });
+    });
+
+    if (newFiles.length > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        files: [...prev.files, ...newFiles],
+      }));
+    }
+
+    e.target.value = '';
+  };
+
+  const handleRemoveFile = (fileId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      files: prev.files.filter((file) => file.id !== fileId),
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -189,6 +245,7 @@ export default function ProjectForm() {
       extras: formData.extras.filter((e) => e.name.trim() !== ''),
       measurements: formData.measurements.filter((m) => m.name.trim() !== '' && m.value.trim() !== ''),
       images: formData.images,
+      files: formData.files,
     };
 
     if (isEditing && id) {
@@ -299,6 +356,75 @@ export default function ProjectForm() {
                 </SelectContent>
               </Select>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Files */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileIcon className="h-5 w-5 text-primary" />
+              Arquivos do Projeto
+            </CardTitle>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => filesInputRef.current?.click()}
+            >
+              <UploadCloud className="mr-2 h-4 w-4" />
+              Adicionar Arquivos
+            </Button>
+            <input
+              ref={filesInputRef}
+              type="file"
+              multiple
+              onChange={handleFilesUpload}
+              className="hidden"
+              accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.zip,.rar"
+            />
+          </CardHeader>
+          <CardContent>
+            {formData.files.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed py-8 text-center">
+                <FileIcon className="mb-2 h-10 w-10 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Nenhum arquivo adicionado.
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Use o botão acima ou arraste arquivos para esta área após salvar o projeto na tela de detalhes.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {formData.files.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center justify-between rounded-md border px-3 py-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                        <FileIcon className="h-4 w-4 text-muted-foreground" />
+                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{file.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {(file.size / 1024).toFixed(1)} KB
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveFile(file.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 

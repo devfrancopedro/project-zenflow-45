@@ -25,10 +25,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import {
-  Dialog,
-  DialogContent,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { ProjectFiles } from '@/components/project/ProjectFiles';
 
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -224,6 +222,9 @@ export default function ProjectDetails() {
               </CardContent>
             </Card>
           )}
+
+          {/* Files */}
+          <ProjectFiles project={project} canManageFiles />
 
           {/* Observations */}
           {project.observations && (
